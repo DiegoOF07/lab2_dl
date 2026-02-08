@@ -1,4 +1,4 @@
-from regex_tree import RegexNode, NodeType, RegexTree
+from regex_tree import RegexNode, NodeType, RegexTree, print_syntax_tree
 from afd import AFD
 
 def expand_regex(regex):
@@ -187,16 +187,85 @@ def build_afd(regex_tree):
 
     return afd
 
-#Debug para el arbol con la regex seleccionada
+def minimize_afd(afd):
+    #Partición inicial
+    partitions = [
+        set(afd.accept_states),
+        set(afd.states) - set(afd.accept_states)
+    ]
+
+    alphabet = set(sym for (_, sym) in afd.transitions.keys())
+
+    changed = True
+    while changed:
+        changed = False
+        new_partitions = []
+
+        for group in partitions:
+            behavior = {}
+            for state in group:
+                signature = []
+                for sym in alphabet:
+                    target = afd.transitions.get((state, sym))
+                    for i, p in enumerate(partitions):
+                        if target in p:
+                            signature.append(i)
+                            break
+                signature = tuple(signature)
+                behavior.setdefault(signature, set()).add(state)
+
+            if len(behavior) > 1:
+                new_partitions.extend(behavior.values())
+                changed = True
+            else:
+                new_partitions.append(group)
+
+        partitions = new_partitions
+
+    return build_minimized_dfa(afd, partitions)
+
+
+def build_minimized_dfa(afd, partitions):
+    minimized = AFD()
+
+    part_to_state = {}
+    for i, part in enumerate(partitions):
+        part_to_state[frozenset(part)] = f"S{i}"
+
+    state_map = {}
+    for part in partitions:
+        new_state = part_to_state[frozenset(part)]
+        for old_state in part:
+            state_map[old_state] = new_state
+
+    minimized.states = set(state_map.values())
+
+    minimized.start_state = state_map[afd.start_state]
+
+    for old_final in afd.accept_states:
+        minimized.accept_states.add(state_map[old_final])
+
+    for (old_state, sym), old_target in afd.transitions.items():
+        new_src = state_map[old_state]
+        new_dst = state_map[old_target]
+        minimized.transitions[(new_src, sym)] = new_dst
+
+    return minimized
+
+
+#Debug con la regex seleccionada
 my_regex = '(0|1|2|3|4|5|6|7|8|9)(0|1|2|3|4|5|6|7|8|9)*'
 my_tree = RegexTree()
 my_tree.root = build_tree(to_postfix(insert_concat(expand_regex(my_regex))), my_tree)
 do_nullable_first_last(my_tree.root)
 do_followpos(my_tree.root, my_tree.followpos)
-my_tree.print_tree(my_tree.root)
+print_syntax_tree(my_tree.root)
+my_tree.print_followpos_table()
 my_afd = build_afd(my_tree)
+my_afd = minimize_afd(my_afd)
 
-print("Estados:")
+print("\nAFD Resultante:")
+print("\nEstados:")
 for s in my_afd.states:
     print(s)
 
@@ -204,5 +273,8 @@ print("\nTransiciones:")
 for (s, a), t in my_afd.transitions.items():
     print(s, "--", a, "-->", t)
 
-print("\nEstados finales:")
+print("\nEstados aceptación:")
 print(my_afd.accept_states)
+
+my_afd.simulate("12345", verbose=True)
+my_afd.simulate("abc", verbose=True)

@@ -43,14 +43,33 @@ class RegexTree:
         self.followpos[pos] = set()
         return node
     
-    #Función para debug
-    def print_tree(self, node, indent=0):
-        if node is None:
-            return
+    def print_followpos_table(self):
+        print("\nTabla followpos:")
+        for pos in sorted(self.followpos.keys()):
+            print(f"  followpos({pos}) = {self.followpos[pos]}")
 
-        print("  " * indent + repr(node))
+    
+def print_syntax_tree(node, indent=0):
+    if node is None:
+        return
 
-        if node.left:
-            self.print_tree(node.left, indent + 1)
-        if node.right:
-            self.print_tree(node.right, indent + 1)
+    prefix = "  " * indent
+
+    if node.node_type == NodeType.SYMBOL:
+        print(
+            f"{prefix}SYMBOL('{node.value}', pos={node.position}) | "
+            f"nullable={node.nullable}, "
+            f"firstpos={node.firstpos}, "
+            f"lastpos={node.lastpos}"
+        )
+    else:
+        print(
+            f"{prefix}{node.node_type.name} | "
+            f"nullable={node.nullable}, "
+            f"firstpos={node.firstpos}, "
+            f"lastpos={node.lastpos}"
+        )
+
+    print_syntax_tree(node.left, indent + 1)
+    print_syntax_tree(node.right, indent + 1)
+
