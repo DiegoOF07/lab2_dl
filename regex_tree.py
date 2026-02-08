@@ -42,3 +42,15 @@ class RegexTree:
 
         self.followpos[pos] = set()
         return node
+    
+    #Función para debug
+    def print_tree(self, node, indent=0):
+        if node is None:
+            return
+
+        print("  " * indent + repr(node))
+
+        if node.left:
+            self.print_tree(node.left, indent + 1)
+        if node.right:
+            self.print_tree(node.right, indent + 1)

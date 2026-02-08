@@ -1,3 +1,4 @@
+# Detectar multiples tipos de tokens para dejarlo como base para el proyecto
 from enum import Enum, auto
 
 
@@ -72,7 +73,8 @@ TokenSpec = [
     (TokenType.THIS,     r'\bthis\b'),
     (TokenType.NEW,      r'\bnew\b'),
     (TokenType.REAL_LIT, r'\d+\.\d+'),
-    (TokenType.INT_LIT,  r'\d+'),
+    # (TokenType.INT_LIT,  r'\d+'),
+    (TokenType.INT_LIT,  r'(0|1|2|3|4|5|6|7|8|9)(0|1|2|3|4|5|6|7|8|9)*'), #Para fines del ejercicio 2 de la actividad 2
     (TokenType.STRING_LIT, r'"([^"\\]|\\.)*"'),
     (TokenType.ID, r'[A-Za-z_][A-Za-z0-9_]*'),
     (TokenType.EQ,     r'=='),
