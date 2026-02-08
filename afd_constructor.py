@@ -1,4 +1,5 @@
 from regex_tree import RegexNode, NodeType, RegexTree
+from afd import AFD
 
 def expand_regex(regex):
     return regex + "#"
@@ -135,6 +136,57 @@ def do_followpos(node, followpos):
         for i in node.left.lastpos:
             followpos[i] |= node.left.firstpos
 
+def map_pos_to_symbol(node, mapping):
+    if node is None:
+        return
+    if node.node_type == NodeType.SYMBOL:
+        mapping[node.position] = node.value
+    map_pos_to_symbol(node.left, mapping)
+    map_pos_to_symbol(node.right, mapping)
+
+def build_afd(regex_tree):
+    afd = AFD()
+
+    pos_to_symbol = {}
+    map_pos_to_symbol(regex_tree.root, pos_to_symbol)
+    start_state = frozenset(regex_tree.root.firstpos)
+    afd.start_state = start_state
+    afd.states.append(start_state)
+
+    unmarked = [start_state]
+
+    end_pos = None
+    for pos, sym in pos_to_symbol.items():
+        if sym == "#":
+            end_pos = pos
+            break
+
+    while unmarked:
+        S = unmarked.pop()
+
+        symbol_groups = {}
+        for p in S:
+            sym = pos_to_symbol[p]
+            if sym == "#":
+                continue
+            symbol_groups.setdefault(sym, set()).update(
+                regex_tree.followpos[p]
+            )
+
+        for sym, U in symbol_groups.items():
+            U = frozenset(U)
+            if U not in afd.states:
+                afd.states.append(U)
+                unmarked.append(U)
+
+            afd.transitions[(S, sym)] = U
+            
+    for state in afd.states:
+        if end_pos in state:
+            afd.accept_states.add(state)
+
+    return afd
+
 #Debug para el arbol con la regex seleccionada
 my_regex = '(0|1|2|3|4|5|6|7|8|9)(0|1|2|3|4|5|6|7|8|9)*'
 my_tree = RegexTree()
@@ -142,3 +194,15 @@ my_tree.root = build_tree(to_postfix(insert_concat(expand_regex(my_regex))), my_
 do_nullable_first_last(my_tree.root)
 do_followpos(my_tree.root, my_tree.followpos)
 my_tree.print_tree(my_tree.root)
+my_afd = build_afd(my_tree)
+
+print("Estados:")
+for s in my_afd.states:
+    print(s)
+
+print("\nTransiciones:")
+for (s, a), t in my_afd.transitions.items():
+    print(s, "--", a, "-->", t)
+
+print("\nEstados finales:")
+print(my_afd.accept_states)
